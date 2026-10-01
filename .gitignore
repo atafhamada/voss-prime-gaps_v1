@@ -1,0 +1,27 @@
+# Build artifacts
+bin/
+*.o
+*.obj
+*.exe
+
+# CUDA intermediate
+*.ptx
+*.cubin
+*.fatbin
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Colab
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backups
+*.bak
