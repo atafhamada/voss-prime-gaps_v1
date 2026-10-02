@@ -15,6 +15,8 @@
 #include <unordered_set>
 #include <utility>
 #include <omp.h>
+#include <atomic>
+#include <thread>
 
 using u64  = uint64_t;
 using u128 = __uint128_t;
@@ -108,6 +110,7 @@ struct PairHash {
 };
 
 int main(int argc, char** argv) {
+    setvbuf(stdout, NULL, _IONBF, 0);
     const char* input      = (argc > 1) ? argv[1] : "results/large_gaps.csv";
     const char* output     = (argc > 2) ? argv[2] : "results/verification_details.csv";
     const char* cache_path = (argc > 3) ? argv[3] : "results/verification_cache.csv";
@@ -188,11 +191,32 @@ int main(int argc, char** argv) {
     std::vector<uint8_t> ok(n, 0);
     for (int i = 0; i < n; i++) if (cached_ok[i]) ok[i] = 1;
 
+    // Long-running progress: check from a monitor thread
+    std::atomic<size_t> progress(0);
+    std::thread monitor([&]() {
+        auto t_start = std::chrono::high_resolution_clock::now();
+        while (progress.load() < to_verify.size()) {
+            std::this_thread::sleep_for(std::chrono::seconds(30));
+            size_t p = progress.load();
+            if (p >= to_verify.size()) break;
+            auto t_now = std::chrono::high_resolution_clock::now();
+            double elapsed = std::chrono::duration<double>(t_now - t_start).count();
+            double rate = (elapsed > 0.1) ? (double)p / elapsed : 0;
+            double eta = (rate > 0) ? (double)(to_verify.size() - p) / rate : 0;
+            printf("  [%zu/%zu] %.1f%%  elapsed=%.0fs  ETA=%.0fs\n",
+                   p, to_verify.size(), 100.0*p/to_verify.size(), elapsed, eta);
+            fflush(stdout);
+        }
+    });
+
     #pragma omp parallel for schedule(dynamic, 64)
     for (size_t k = 0; k < to_verify.size(); k++) {
         int i = to_verify[k];
         ok[i] = verify_gap(gaps[i].first, gaps[i].second, bp) ? 1 : 0;
+        progress.fetch_add(1, std::memory_order_relaxed);
     }
+
+    monitor.join();
 
     // ---- Count ----
     long long verified = 0, failed = 0;

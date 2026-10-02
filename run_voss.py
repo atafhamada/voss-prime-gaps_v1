@@ -10,7 +10,7 @@
 # ============================================================
 # CONFIGURATION — change this only
 # ============================================================
-N_VALUE = 1000000000000   # 10^12
+N_VALUE = 10000000000000   # 10^12
 SEG_NUM = 30000000000     # 3x10^10 (recommended for A100-40GB)
 
 # ============================================================
@@ -20,6 +20,16 @@ SKIP_VERIFY       = False   # set True to skip Miller-Rabin verification
 SKIP_CERTIFICATES = False   # set True to skip certificate generation
 SKIP_HTML         = False   # set True to skip HTML report
 SKIP_FIGURES      = False   # set True to skip figures
+
+# ============================================================
+# Files preserved across pipeline runs (not deleted)
+# ============================================================
+KEEP_FILES = [
+    'verification_cache.csv',        # cumulative
+    'verification_details.csv',      # latest run output
+    'submission_candidates.csv',     # submission list
+    'hist_snapshots',                # cumulative
+]
 
 # ============================================================
 import os, sys, subprocess, time, importlib

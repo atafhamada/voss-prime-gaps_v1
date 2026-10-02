@@ -134,26 +134,47 @@ __global__ void sieve_w30_seg_kernel(uint32_t* __restrict__ bits, uint32_t p,
     if (idx >= seg_bits) return;
     uint32_t w = (uint32_t)(idx >> 5);
     uint32_t i = (uint32_t)(idx & 31);
-    atomicAnd(&bits[w], ~(1u << i));
+    uint32_t mask = 1u << i;
+    uint32_t old = __ldg(&bits[w]);
+    if (old & mask) {
+        atomicAnd(&bits[w], ~mask);
+    }
 }
 
-__global__ void extract_w30_seg_kernel(const uint32_t* __restrict__ bits,
-    int64_t num_words, int64_t seg_bits,
+__global__ void extract_w30_seg_kernel(
+    const uint32_t* __restrict__ bits, int64_t num_words, int64_t seg_bits,
     uint64_t* __restrict__ positions, uint64_t* __restrict__ global_count)
 {
     int64_t widx = (int64_t)blockIdx.x*blockDim.x + threadIdx.x;
     if (widx >= num_words) return;
     uint32_t word = bits[widx]; if (word == 0) return;
-    int64_t base_idx = widx * 32; int valid = 0; uint32_t w = word;
-    while (w) { int bit = __ffs(w)-1; w &= w-1;
-                if (base_idx+bit < seg_bits) valid++; }
-    if (valid == 0) return;
+    int64_t base_idx = widx * 32;
+
+    // Fast path: count via __popc (single instruction)
+    int total_bits = __popc(word);
+    int valid = total_bits;
+    // Edge case: last word may exceed seg_bits
+    if (base_idx + 32 > seg_bits) {
+        valid = 0;
+        uint32_t w = word;
+        while (w) {
+            int bit = __ffs(w) - 1;
+            w &= w - 1;
+            if (base_idx + bit < seg_bits) valid++;
+        }
+        if (valid == 0) return;
+    }
+
     uint64_t base = atomicAdd((unsigned long long*)global_count,
                               (unsigned long long)valid);
-    w = word;
-    while (w) { int bit = __ffs(w)-1; w &= w-1;
-                int64_t idx = base_idx+bit;
-                if (idx < seg_bits) positions[base++] = (uint64_t)idx; }
+
+    uint32_t w = word;
+    while (w) {
+        int bit = __ffs(w) - 1;
+        w &= w - 1;
+        int64_t idx = base_idx + bit;
+        if (idx < seg_bits) positions[base++] = (uint64_t)idx;
+    }
 }
 
 __global__ void mod4_count_kernel(const uint64_t* __restrict__ positions,
@@ -376,6 +397,12 @@ int main() {
 
     const int BLOCK = 256;
     cudaStream_t stream; CUDA_CHECK(cudaStreamCreate(&stream));
+
+    // ---- Precompute modinv(30 mod p, p) for all base primes ----
+    int64_t* cached_inv30 = (int64_t*)malloc(base_count * sizeof(int64_t));
+    for (int i = 0; i < base_count; i++) {
+        cached_inv30[i] = modinv(30 % base_h[i], (int64_t)base_h[i]);
+    }
     auto t_all_start = std::chrono::high_resolution_clock::now();
 
     for (int64_t seg = start_seg; seg < NUM_SEG; seg++) {
@@ -398,7 +425,7 @@ int main() {
             uint32_t p = base_h[i];
             int64_t p_sq = (int64_t)p*p;
             if (p_sq > seg_high) break;
-            int64_t inv30 = modinv(30 % p, (int64_t)p);
+            int64_t inv30 = cached_inv30[i];
             LaunchInfo L; L.p = p; int64_t max_steps = 0;
             for (int o = 0; o < 8; o++) {
                 int r = W30[o];
@@ -537,7 +564,7 @@ int main() {
                 cudaFree(gaps_d); cudaFree(large_gaps_d); cudaFree(lg_count_d);
                 cudaFree(m1_d); cudaFree(m3_d);
     cudaFree(modq_gap_hist_d);
-                free(base_h); free(gaps_total);
+                free(base_h); free(gaps_total); free(cached_inv30);
                 return 0;
             }
         }
