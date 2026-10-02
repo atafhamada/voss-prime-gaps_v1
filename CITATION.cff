@@ -1,0 +1,101 @@
+# Citation information for the VOSS repository.
+# This file provides human- and machine-readable citation metadata.
+# GitHub automatically detects this file and adds a "Cite this repository" button.
+# For more info: https://citation-file-format.github.io/
+
+cff-version: 1.2.0
+
+message: >-
+  If you use VOSS in academic work, please cite it using the metadata
+  provided in this file.
+
+title: >-
+  VOSS: Vectorized Odd Segmented Sieve for Prime Gap Analysis
+
+abstract: >-
+  VOSS is a high-performance CUDA implementation for computing prime gaps
+  using a Wheel-30 segmented sieve. It includes a complete mathematical
+  verification pipeline (deterministic Miller-Rabin + Interval Sieve,
+  SHA-256 signed certificates) and 12 statistical analyses with documented
+  confidence levels. The project is verified against OEIS A006880 and the
+  Prime Gap List Project up to 10^13.
+
+type: software
+
+authors:
+  - family-names: Hamada
+    given-names: Ataf
+    email: ataf.hamada@gmail.com
+    affiliation: Independent Researcher
+
+version: 2.0.0
+
+date-released: "2026-10-01"
+
+url: "https://github.com/atafhamada/voss-prime-gaps_v1"
+
+repository-code: "https://github.com/atafhamada/voss-prime-gaps_v1"
+
+license: MIT
+
+keywords:
+  - prime gaps
+  - segmented sieve
+  - Wheel-30
+  - CUDA
+  - GPU computing
+  - prime number theory
+  - Miller-Rabin
+  - Interval Sieve
+  - Hardy-Littlewood
+  - Cramér conjecture
+  - Chebyshev bias
+  - OEIS A006880
+  - Prime Gap List Project
+  - number theory
+  - high-performance computing
+
+# ============================================================
+# Associated references
+# ============================================================
+references:
+  - type: software
+    title: "OEIS A006880: Number of primes less than 10^n"
+    url: "https://oeis.org/A006880"
+    authors:
+      - name: "OEIS Foundation Inc."
+    year: 2026
+
+  - type: software
+    title: "Prime Gap List Project"
+    url: "https://primegap-list-project.github.io/"
+    authors:
+      - name: "Prime Gap List Project"
+
+  - type: article
+    title: "Empirical verification of the even Goldbach conjecture and computation of prime gaps up to 4x10^18"
+    authors:
+      - family-names: Oliveira e Silva
+        given-names: Tomas
+      - family-names: Herzog
+        given-names: Siegfried
+      - family-names: Pardal
+        given-names: Luis
+    journal: "Mathematics of Computation"
+    volume: 83
+    start: 2033
+    end: 2060
+    year: 2014
+
+  - type: article
+    title: "Hidden structure in the randomness of the prime number sequence?"
+    authors:
+      - family-names: Ares
+        given-names: Saul
+      - family-names: Castro
+        given-names: Miguel
+    journal: "Physica A"
+    volume: 360
+    start: 285
+    end: 296
+    year: 2006
