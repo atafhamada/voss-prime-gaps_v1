@@ -118,7 +118,7 @@ def write_text_cert(filepath, p_before, p_after, gap, merit, sha):
         f.write(f"Gap Size (g)            : {gap:,}\n")
         f.write(f"Merit (g / ln p)        : {merit:.6f}\n")
         f.write(f"ln(p)                   : {math.log(p_before):.6f}\n")
-        f.write(f"Max Factor Limit (√p+g) : {math.isqrt(p_after):,}\n")
+        f.write(f"Max Factor Limit (sqrtp+g) : {math.isqrt(p_after):,}\n")
         f.write("-" * 66 + "\n")
         f.write("VERIFICATION METHOD:\n")
         f.write("  1. p_before and p_after are proven prime via\n")
@@ -167,7 +167,7 @@ def main():
                 verified_map[key] = (r['verified'] == '1')
         print(f"  Loaded {len(verified_map):,} verification results")
     else:
-        print(f"WARN: {details_path} not found — will verify inline")
+        print(f"WARN: {details_path} not found - will verify inline")
 
     # ---- Read verification details instead of re-verifying ----
     details_path = os.path.join(ROOT, 'results', 'verification_details.csv')
@@ -180,7 +180,7 @@ def main():
                 verified_map[key] = (r['verified'] == '1')
         print(f"  Loaded {len(verified_map):,} results")
     else:
-        print(f"WARN: {details_path} not found — will verify inline")
+        print(f"WARN: {details_path} not found - will verify inline")
 
     # ---- Read verification details (avoid re-verification) ----
     details_path = os.path.join(ROOT, 'results', 'verification_details.csv')

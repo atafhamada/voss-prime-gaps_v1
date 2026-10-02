@@ -53,7 +53,7 @@ def main():
             if gaps[i] == 2 and gaps[i+1] == 4 and gaps[i+2] == 2:
                 quadruplet += 1
     else:
-        print("INFO: no gap_sequence.csv — triplets/quadruplets not computed")
+        print("INFO: no gap_sequence.csv - triplets/quadruplets not computed")
 
     # Two ranges: full N and sample range
     N_full = float(N_val) if N_val > 0 else 1

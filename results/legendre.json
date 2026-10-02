@@ -9,13 +9,5 @@
   "max_prime_count": 1168,
   "mean_prime_count": 576.2536,
   "max_gap_to_first_prime": 147,
-  "verdict": "PASS",
-  "_confidence": {
-    "computation": 100,
-    "interpretation": 100,
-    "novelty": 20,
-    "type": "exact_computation",
-    "reference": "Legendre (1798)",
-    "limitation": "Only finite range tested; not a proof"
-  }
+  "verdict": "PASS"
 }

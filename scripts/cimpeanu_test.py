@@ -117,7 +117,7 @@ def main():
         json.dump(report, f, indent=2)
 
     print("=" * 60)
-    print("EMPIRICAL SCALING FIT — Record Gaps")
+    print("EMPIRICAL SCALING FIT - Record Gaps")
     print("=" * 60)
     print("N = " + format(N_val, ","))
     print("Record gaps: " + str(len(records)))

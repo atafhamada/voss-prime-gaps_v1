@@ -9,25 +9,17 @@
       -0.02
     ]
   },
-  "mean_gap_raw": 17.2056504,
-  "mean_normalized": 1.000137619132101,
-  "std_normalized": 0.846935227599497,
-  "ac_lag1": -0.037891100045374375,
-  "ac_lag2": -0.018643009448998563,
-  "ac_lag5": -0.007311768456379872,
-  "ac_lag10": -0.003743928680352258,
+  "mean_gap_raw": 24.5639352,
+  "mean_normalized": 1.0001030397467388,
+  "std_normalized": 0.8883848772461466,
+  "ac_lag1": -0.024224475871383953,
+  "ac_lag2": -0.012169142689129622,
+  "ac_lag5": -0.005654235084468043,
+  "ac_lag10": -0.0033544523220468197,
   "ci_95": 0.0008765386471799175,
-  "outside_ci": 44,
+  "outside_ci": 29,
   "expected_outside": 2.5,
   "max_lag": 50,
   "verdict": "structure detected (negative correlation)",
-  "interpretation": "consistent with Ares-Castro (2006)",
-  "_confidence": {
-    "computation": 100,
-    "interpretation": 95,
-    "novelty": 30,
-    "type": "exact_computation",
-    "reference": "Ares & Castro (2006), Physica A 360, 285",
-    "limitation": "Already known from 2006; verification at 10^11"
-  }
+  "interpretation": "consistent with Ares-Castro (2006)"
 }

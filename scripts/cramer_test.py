@@ -151,7 +151,7 @@ def main():
     print("Upper envelope fit: y = " + format(slope, ".4f") + " * x + " + format(intercept, ".4f"))
     print("  95% CI slope:      [" + format(slope_ci[0], ".4f") + ", " + format(slope_ci[1], ".4f") + "]")
     print("  95% CI intercept:  [" + format(intercept_ci[0], ".4f") + ", " + format(intercept_ci[1], ".4f") + "]")
-    print("  R²:                " + format(r_squared, ".4f"))
+    print("  R^2:                " + format(r_squared, ".4f"))
     print("")
     print("Verdict: " + report["verdict"])
     print("=" * 60)

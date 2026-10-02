@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 # ============================================================
-# VOSS One-Click Runner
+# VOSS One-Click Runner (v2.0)
+# ============================================================
+# Pipeline:
+#   [0/8] Dependency check
+#   [1/8] Configure VOSS
+#   [2/8] VOSS main sieve
+#   [3/8] Verification (C++ with cache)
+#   [4/8] Certificates (SHA-256)
+#   [5/8] HTML report
+#   [6/8] Figures (17 total)
+#   [7/8] Mathematical analyses (12 total)
+#   [8/8] Summary
 # ============================================================
 # Usage:
 #   1. Edit N_VALUE below (default: 10^12)
@@ -10,7 +21,7 @@
 # ============================================================
 # CONFIGURATION — change this only
 # ============================================================
-N_VALUE = 10000000000000   # 10^12
+N_VALUE = 100000000000   # 10^12
 SEG_NUM = 30000000000     # 3x10^10 (recommended for A100-40GB)
 
 # ============================================================
@@ -74,8 +85,12 @@ def run_script(rel_path, label):
                "results/large_gaps.csv",
                "results/verification_details.csv",
                "results/verification_cache.csv"]
+    env = os.environ.copy()
+    env['PYTHONIOENCODING'] = 'utf-8'
+    env['PYTHONUNBUFFERED'] = '1'
     proc = subprocess.Popen(cmd,
                             cwd=HERE,
+                            env=env,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             bufsize=0)
@@ -113,19 +128,48 @@ def summary():
     figs = os.path.join(HERE, "figures")
     print("  Generated artifacts:")
     items = [
-        ("results/gap_histogram.csv",      "gap histogram"),
-        ("results/chebyshev.csv",          "Chebyshev bias"),
-        ("results/hl_trend.csv",           "P(6)/P(2) trend"),
-        ("results/large_gaps.csv",         "high-merit gaps"),
-        ("results/verification_report.json","verification report"),
-        ("results/certificates.csv",       "digital certificates"),
-        ("results/verification_report.html","HTML report"),
-        ("figures/gap_distribution.png",   "figure: distribution"),
-        ("figures/hl_trend.png",           "figure: HL trend"),
-        ("figures/chebyshev_bias.png",     "figure: Chebyshev"),
-        ("figures/top_merit_gaps.png",     "figure: top merit"),
-        ("figures/cramer_conjecture.png",  "figure: Cramer"),
-        ("figures/gap_stats_across_N.png", "figure: stats across N"),
+        # Core outputs
+        ("results/gap_histogram.csv",           "gap histogram"),
+        ("results/chebyshev.csv",               "Chebyshev bias"),
+        ("results/hl_trend.csv",                "P(6)/P(2) trend"),
+        ("results/modq_counts.csv",             "mod-q counts"),
+        ("results/modq_gap_hist.csv",           "mod-q gap histograms"),
+        ("results/large_gaps.csv",              "high-merit gaps"),
+        ("results/verification_details.csv",    "verification details"),
+        ("results/certificates.csv",            "digital certificates"),
+        ("results/verification_report.html",    "HTML report"),
+        ("results/confidence_scores.json",      "confidence scores"),
+        # 12 analysis reports
+        ("results/chi_square_report.json",      "Chi-square"),
+        ("results/ks_report.json",              "KS test"),
+        ("results/cramer_report.json",          "Cramer"),
+        ("results/jumping_champions.json",      "Jumping champions"),
+        ("results/cimpeanu_report.json",        "Cimpeanu fit"),
+        ("results/anomalous_gaps.json",         "Anomalous gaps"),
+        ("results/arithmetic_modulation.json",  "Arithmetic modulation"),
+        ("results/k_tuples.json",               "k-tuples"),
+        ("results/autocorr.json",               "Autocorrelation"),
+        ("results/brun.json",                   "Brun constant"),
+        ("results/legendre.json",               "Legendre"),
+        ("results/singular_series.json",        "HL singular series"),
+        # 17 figures
+        ("figures/gap_distribution.png",        "figure: distribution"),
+        ("figures/hl_trend.png",                "figure: HL trend"),
+        ("figures/chebyshev_bias.png",          "figure: Chebyshev"),
+        ("figures/top_merit_gaps.png",          "figure: top merit"),
+        ("figures/cramer_conjecture.png",       "figure: Cramer"),
+        ("figures/gap_stats_across_N.png",      "figure: stats across N"),
+        ("figures/chi_square_plot.png",         "figure: Chi-square"),
+        ("figures/ks_test.png",                 "figure: KS test"),
+        ("figures/jumping_champions.png",       "figure: champions"),
+        ("figures/cimpeanu_law.png",            "figure: Cimpeanu"),
+        ("figures/anomalous_gaps.png",          "figure: anomalous"),
+        ("figures/arithmetic_modulation.png",   "figure: arith. mod."),
+        ("figures/k_tuples.png",                "figure: k-tuples"),
+        ("figures/autocorr.png",                "figure: autocorr"),
+        ("figures/brun_constant.png",           "figure: Brun"),
+        ("figures/legendre.png",                "figure: Legendre"),
+        ("figures/singular_series.png",         "figure: singular"),
     ]
     for rel, desc in items:
         p = os.path.join(HERE, rel)
@@ -167,7 +211,7 @@ def main():
         print(f"\n  large_gaps.csv: not found (small N?)")
     
     if not lg_has_data:
-        print("  → Skipping verification/certificates (no gaps >= 500)")
+        print("  -> Skipping verification/certificates (no gaps >= 500)")
         SKIP_VERIFY = True
         SKIP_CERTIFICATES = True
     
@@ -204,15 +248,23 @@ def main():
         run_script("scripts/generate_figures.py", "[6/8] Figures")
 
     # ============ Analyses (Phase 4) ============
-    section("[7/8] Mathematical analyses")
+    section("[7/8] Mathematical analyses (12 total)")
 
     analyses = [
+        # Original 6
         ("scripts/chi_square_test.py",       "Chi-square (Poisson vs GUE)"),
         ("scripts/cramer_test.py",           "Cramer conjecture"),
         ("scripts/jumping_champions.py",     "Jumping champions"),
         ("scripts/cimpeanu_test.py",         "Cimpeanu law"),
         ("scripts/anomalous_gaps.py",        "Anomalous gaps"),
         ("scripts/arithmetic_modulation.py", "Arithmetic modulation"),
+        # Additional 6 (v2.0)
+        ("scripts/ks_test.py",               "Kolmogorov-Smirnov test"),
+        ("scripts/k_tuples.py",              "k-tuples (twins/triplets)"),
+        ("scripts/autocorrelation.py",       "Autocorrelation (real sequence)"),
+        ("scripts/brun_constant.py",         "Brun constant"),
+        ("scripts/legendre.py",              "Legendre conjecture"),
+        ("scripts/singular_series.py",       "HL singular series"),
     ]
     for script, label in analyses:
         run_script(script, "   " + label)

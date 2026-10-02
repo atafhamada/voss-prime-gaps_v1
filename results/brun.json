@@ -10,13 +10,5 @@
   "error_pct": -2.2203297947300022,
   "uncertainty": 1e-06,
   "status": "partial",
-  "note": "Uses Nicely partial sums + 2*C2/ln(N) theoretical remainder",
-  "_confidence": {
-    "computation": 100,
-    "interpretation": 90,
-    "novelty": 20,
-    "type": "verification",
-    "reference": "Brun (1919); Nicely (2008)",
-    "limitation": "Uses external partial sums; verification only"
-  }
+  "note": "Uses Nicely partial sums + 2*C2/ln(N) theoretical remainder"
 }

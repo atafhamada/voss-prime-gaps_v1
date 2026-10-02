@@ -7,7 +7,9 @@ bin/
 *.exe
 *.so
 
+# ============================================================
 # CUDA intermediates
+# ============================================================
 *.ptx
 *.cubin
 *.fatbin
@@ -17,11 +19,6 @@ bin/
 # ============================================================
 *.bak
 *.pre_*
-*.pre_ckpt
-*.pre_hl
-*.pre_merit
-*.pre_modq
-*.pre_am*
 *~
 
 # ============================================================
@@ -52,8 +49,9 @@ results/checkpoint.bin
 results/stop.txt
 
 # ============================================================
-# Large regenerable data (comment out to include)
+# Large regenerable data files (> 100 MB or regenerate easily)
 # ============================================================
+results/gap_sequence.csv
 results/certificates.csv
 results/verification_details.csv
 results/verification_cache.csv

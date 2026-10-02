@@ -149,7 +149,7 @@ def main():
     print()
     print("Ratio chi2_GUE / chi2_Poisson = " + format(chi2_g/chi2_p, ".4e"))
     print("")
-    print("EFFECT SIZES (Cohen's w) — meaningful at large N:")
+    print("EFFECT SIZES (Cohen's w) - meaningful at large N:")
     print("  Poisson: w = " + format(cohens_w_p, ".6f") + " (" + interpret_w(cohens_w_p) + ")")
     print("  GUE:     w = " + format(cohens_w_g, ".6f") + " (" + interpret_w(cohens_w_g) + ")")
     print("")
@@ -159,7 +159,7 @@ def main():
     
     # ---- Multi-bin robustness test ----
     print("")
-    print("ROBUSTNESS CHECK — Multiple bin configurations:")
+    print("ROBUSTNESS CHECK - Multiple bin configurations:")
     bin_configs = [
         [0, 6.5, 12.5, 20.5, 30.5, 50.5, 100.5, 200.5, 500.5, np.inf],
         [0, 4.5, 8.5, 14.5, 22.5, 34.5, 60.5, 120.5, np.inf],
