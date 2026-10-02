@@ -699,14 +699,27 @@ If you use VOSS in academic work, please cite:
 
 ## License
 
-Released under the **MIT License** — see [LICENSE](LICENSE).
+Copyright (c) 2026 **Ataf Hamada**. All rights reserved.
+
+This project is licensed under the **VOSS Non-Commercial License v1.0**.
+
+| Use Case | Allowed? |
+|----------|----------|
+| Personal / academic research | ✅ Yes |
+| Study & modify for non-commercial use | ✅ Yes |
+| Redistribute with attribution | ✅ Yes |
+| **Commercial use** | ❌ **No — requires written permission** |
+| **Removing author's name** | ❌ **No — license terminates** |
+| **Selling or sublicensing** | ❌ **No** |
+
+
+For commercial licensing, contact: **[Ataf.hamada2@gmail.com]**
+
+See [LICENSE](LICENSE) for full terms.
+See [OWNERSHIP.md](OWNERSHIP.md) for ownership documentation.
 
 ---
 
-<div align="center">
-
 **Author:** Ataf Hamada · **Year:** 2026
 
-*Verified to 10¹³ · Every gap proven · Every certificate signed*
-
-</div>
+*Verified to 10¹³ · Every gap proven · Every certificate signed · Unauthorized commercial use prohibited*
