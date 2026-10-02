@@ -32,6 +32,7 @@ __constant__ int W30_TO_Q30_IDX[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 #define HIST_BLOCK 256
 #define LARGE_GAP_THRESHOLD 500
 #define MAX_LARGE_GAPS 5000000
+#define GAP_SEQ_SIZE 5000000
 
 __constant__ int W30_DEV[8] = {1, 7, 11, 13, 17, 19, 23, 29};
 static const int W30[8] = {1, 7, 11, 13, 17, 19, 23, 29};
@@ -230,6 +231,27 @@ __global__ void modq_count_kernel(
     }
 }
 
+// Dedicated sampling kernel — runs AFTER thrust::sort
+__global__ void sample_gaps_kernel(
+    const uint64_t* __restrict__ positions,
+    uint64_t n, uint64_t k_base,
+    int32_t* __restrict__ gap_seq,
+    uint64_t* __restrict__ pos_seq,
+    int64_t sample_count)
+{
+    int64_t i = (int64_t)blockIdx.x * blockDim.x + threadIdx.x;
+    if (i + 1 >= (int64_t)n) return;
+    if (i >= sample_count) return;
+    uint64_t idx0 = positions[i];
+    uint64_t idx1 = positions[i + 1];
+    uint64_t v0 = 30ULL*(k_base+(idx0>>3)) + (uint64_t)W30_DEV[idx0 & 7];
+    uint64_t v1 = 30ULL*(k_base+(idx1>>3)) + (uint64_t)W30_DEV[idx1 & 7];
+    if (v1 > v0) {
+        gap_seq[i] = (int32_t)(v1 - v0);
+        pos_seq[i] = v0;
+    }
+}
+
 __global__ void gaps_w30_seg_kernel(
     const uint64_t* __restrict__ positions,
     uint64_t n, uint64_t k_base,
@@ -363,6 +385,10 @@ int main() {
     CUDA_CHECK(cudaMalloc(&m3_d, sizeof(unsigned long long)));
     int64_t* modq_gap_hist_d;
     CUDA_CHECK(cudaMalloc(&modq_gap_hist_d, MODQ_NUM_TOTAL * MODQ_MAX_GAP * sizeof(int64_t)));
+    int32_t* gap_seq_d;
+    uint64_t* pos_seq_d;
+    CUDA_CHECK(cudaMalloc(&gap_seq_d, GAP_SEQ_SIZE * sizeof(int32_t)));
+    CUDA_CHECK(cudaMalloc(&pos_seq_d, GAP_SEQ_SIZE * sizeof(uint64_t)));
     CUDA_CHECK(cudaMemset(modq_gap_hist_d, 0, MODQ_NUM_TOTAL * MODQ_MAX_GAP * sizeof(int64_t)));
     unsigned long long* modq_d;
     CUDA_CHECK(cudaMalloc(&modq_d, MAX_Q_SLOTS * sizeof(unsigned long long)));
@@ -496,6 +522,29 @@ int main() {
         thrust::device_ptr<uint64_t> ptr(positions_d);
         thrust::sort(ptr, ptr + n_pos);
         CUDA_CHECK(cudaDeviceSynchronize());
+        
+        // Sample gaps DISTRIBUTED across all segments
+        // Each segment contributes GAP_SEQ_SIZE / NUM_SEG samples
+        {
+            int64_t per_seg = GAP_SEQ_SIZE / NUM_SEG;
+            if (per_seg > 0 && n_pos > 1) {
+                // Sample from middle of each segment
+                int64_t start = (int64_t)(n_pos / 2);
+                int64_t avail = (int64_t)n_pos - start - 1;
+                int64_t sample_n = (avail < per_seg) ? avail : per_seg;
+                if (sample_n > 1) {
+                    int sg = (int)((sample_n + BLOCK - 1) / BLOCK);
+                    // Offset output by segment
+                    int64_t offset = seg * per_seg;
+                    if (offset + sample_n <= GAP_SEQ_SIZE) {
+                        sample_gaps_kernel<<<sg, BLOCK>>>(
+                            positions_d + start, n_pos - start, k_base,
+                            gap_seq_d + offset, pos_seq_d + offset, sample_n);
+                        CUDA_CHECK(cudaDeviceSynchronize());
+                    }
+                }
+            }
+        }
         auto t3 = std::chrono::high_resolution_clock::now();
         t_sort += std::chrono::duration<double,std::milli>(t3-t2).count();
 
@@ -564,6 +613,8 @@ int main() {
                 cudaFree(gaps_d); cudaFree(large_gaps_d); cudaFree(lg_count_d);
                 cudaFree(m1_d); cudaFree(m3_d);
     cudaFree(modq_gap_hist_d);
+    cudaFree(gap_seq_d);
+    cudaFree(pos_seq_d);
                 free(base_h); free(gaps_total); free(cached_inv30);
                 return 0;
             }
@@ -730,6 +781,26 @@ int main() {
     if (fp) { fprintf(fp, "N,pi_4_1,pi_4_3,difference\n");
         fprintf(fp, "%lld,%llu,%llu,%lld\n", (long long)N, p41, p43, diff);
         fclose(fp); printf("OK chebyshev.csv\n"); }
+        
+    // Export real gap sequence
+    fp = fopen("gap_sequence.csv", "w");
+    if (fp) {
+        int32_t* seq_h = (int32_t*)malloc(GAP_SEQ_SIZE * sizeof(int32_t));
+        CUDA_CHECK(cudaMemcpy(seq_h, gap_seq_d, GAP_SEQ_SIZE * sizeof(int32_t),
+                              cudaMemcpyDeviceToHost));
+        uint64_t* pos_h = (uint64_t*)malloc(GAP_SEQ_SIZE * sizeof(uint64_t));
+        CUDA_CHECK(cudaMemcpy(pos_h, pos_seq_d, GAP_SEQ_SIZE * sizeof(uint64_t),
+                              cudaMemcpyDeviceToHost));
+        fprintf(fp, "index,gap,p\n");
+        for (int i = 0; i < GAP_SEQ_SIZE; i++) {
+            if (seq_h[i] > 0) fprintf(fp, "%d,%d,%llu\n", i, seq_h[i],
+                                      (unsigned long long)pos_h[i]);
+        }
+        fclose(fp);
+        free(seq_h);
+        free(pos_h);
+        printf("OK gap_sequence.csv\n");
+    }
 
     unsigned int lgc;
     CUDA_CHECK(cudaMemcpy(&lgc, lg_count_d, sizeof(unsigned int), cudaMemcpyDeviceToHost));

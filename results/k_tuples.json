@@ -1,0 +1,19 @@
+{
+  "N": 100000000000,
+  "twins": 224376048,
+  "cousins": 224373160,
+  "sexy": 408550278,
+  "octuplets": 185402143,
+  "triplets_246": 23581,
+  "triplets_426": 23361,
+  "quadruplets": 1379,
+  "expected_twins_HL": 205808661.80024236,
+  "expected_sexy_HL": 411617323.6004847,
+  "expected_triplet_HL": 23374.56137951069,
+  "expected_quad_HL": 1372.940954066472,
+  "ratio_twins": 1.090216738388684,
+  "ratio_sexy": 0.9925487936861919,
+  "ratio_triplet": 1.0088317644612688,
+  "ratio_quad": 1.004413187555941,
+  "status": "exact (from real sequence)"
+}

@@ -1,13 +1,24 @@
 {
-  "N": 10000000000000,
-  "n_points": 4091794,
-  "max_merit_observed": 22.803371,
-  "max_merit_position": 2614941711251,
-  "max_merit_gap": 652,
-  "cramer_predicted_max": 29.933606208922594,
-  "ratio_observed_over_cramer": 0.7617983226225106,
-  "fit_slope": 0.8659726535453536,
-  "fit_intercept": -3.4725744651692874,
+  "N": 100000000000,
+  "n_points": 36482,
+  "max_merit_observed": 19.044132,
+  "max_merit_position": 25056082543,
+  "max_merit_gap": 456,
+  "cramer_predicted_max": 25.328436022934504,
+  "ratio_observed_over_cramer": 0.7518874036579217,
+  "fit_slope": 0.8285814210593795,
+  "fit_intercept": -2.941810124090608,
+  "fit_slope_se": 0.061543322625620615,
+  "fit_intercept_se": 1.2771416359241665,
+  "fit_slope_95ci": [
+    0.7079565087131631,
+    0.9492063334055959
+  ],
+  "fit_intercept_95ci": [
+    -5.445007730501974,
+    -0.4386125176792417
+  ],
+  "r_squared": 0.883076676172531,
   "n_bins": 30,
   "verdict": "consistent with Cramer"
 }

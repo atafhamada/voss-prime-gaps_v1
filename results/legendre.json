@@ -1,0 +1,21 @@
+{
+  "N": 100000000000,
+  "n_max": 10000,
+  "n_pass": 10000,
+  "n_fail": 0,
+  "success_rate": 100.0,
+  "failures": [],
+  "min_prime_count": 2,
+  "max_prime_count": 1168,
+  "mean_prime_count": 576.2536,
+  "max_gap_to_first_prime": 147,
+  "verdict": "PASS",
+  "_confidence": {
+    "computation": 100,
+    "interpretation": 100,
+    "novelty": 20,
+    "type": "exact_computation",
+    "reference": "Legendre (1798)",
+    "limitation": "Only finite range tested; not a proof"
+  }
+}

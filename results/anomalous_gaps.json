@@ -106,5 +106,13 @@
       "gap": 674,
       "merit": 22.768789
     }
-  ]
+  ],
+  "_confidence": {
+    "computation": 100,
+    "interpretation": 100,
+    "novelty": 70,
+    "type": "exact_computation",
+    "reference": "Prime Gap List Project",
+    "limitation": "Depends on threshold definition"
+  }
 }

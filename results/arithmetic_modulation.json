@@ -68,5 +68,13 @@
   "theory_slope": 0.577,
   "theory_intercept": -0.601,
   "slope_ratio": 0.7387759369086686,
-  "note": "beta = mean L1 deviation of P(gap|residue) from P(gap|q)"
+  "note": "beta = mean L1 deviation of P(gap|residue) from P(gap|q)",
+  "_confidence": {
+    "computation": 100,
+    "interpretation": 100,
+    "novelty": 30,
+    "type": "exact_computation + proven_theorem",
+    "reference": "Dirichlet (1837) \u2014 proven theorem",
+    "limitation": "Theorem is proven; this is verification"
+  }
 }

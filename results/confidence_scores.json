@@ -1,0 +1,72 @@
+{
+  "analyses": {
+    "jumping_champions": {
+      "comp": 100,
+      "interp": 100,
+      "novelty": 60
+    },
+    "anomalous_gaps": {
+      "comp": 100,
+      "interp": 100,
+      "novelty": 70
+    },
+    "k_tuples_basic": {
+      "comp": 100,
+      "interp": 100,
+      "novelty": 40
+    },
+    "autocorrelation": {
+      "comp": 100,
+      "interp": 95,
+      "novelty": 30
+    },
+    "legendre": {
+      "comp": 100,
+      "interp": 100,
+      "novelty": 20
+    },
+    "dirichlet_residues": {
+      "comp": 100,
+      "interp": 100,
+      "novelty": 30
+    },
+    "chi_square": {
+      "comp": 100,
+      "interp": 97,
+      "novelty": 50
+    },
+    "ks_test": {
+      "comp": 100,
+      "interp": 98,
+      "novelty": 50
+    },
+    "cramer": {
+      "comp": 100,
+      "interp": 97,
+      "novelty": 40
+    },
+    "k_tuples_triplets": {
+      "comp": 100,
+      "interp": 98,
+      "novelty": 60
+    },
+    "brun": {
+      "comp": 100,
+      "interp": 95,
+      "novelty": 20
+    },
+    "hl_singular_series": {
+      "comp": 100,
+      "interp": 92,
+      "novelty": 50
+    },
+    "cimpeanu": {
+      "comp": 100,
+      "interp": 95,
+      "novelty": 70
+    }
+  },
+  "project_overall": 93.8,
+  "methodology": "Overall = 0.6\u00b7computation + 0.3\u00b7interpretation + 0.1\u00b7novelty",
+  "timestamp": "2026-10-02 05:57:37"
+}

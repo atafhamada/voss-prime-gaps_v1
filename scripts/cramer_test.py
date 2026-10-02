@@ -59,9 +59,29 @@ def main():
     xm = np.array([x for x, _ in max_per_bin])
     ym = np.array([y for _, y in max_per_bin])
 
-    # Fit line to upper envelope
+    # Fit line to upper envelope with error estimation
     coeffs = np.polyfit(xm, ym, 1)
     slope, intercept = coeffs[0], coeffs[1]
+    
+    # Residuals and standard error
+    residuals = ym - (slope * xm + intercept)
+    n_pts = len(xm)
+    if n_pts > 2:
+        sse = np.sum(residuals ** 2)
+        mse = sse / (n_pts - 2)
+        cov_matrix = mse * np.linalg.inv(np.array([[np.sum(xm**2), np.sum(xm)],
+                                                    [np.sum(xm), n_pts]]))
+        se_slope = float(np.sqrt(cov_matrix[0, 0]))
+        se_intercept = float(np.sqrt(cov_matrix[1, 1]))
+        # 95% CI
+        t_crit = 1.96  # approximate for large n
+        slope_ci = (float(slope - t_crit*se_slope), float(slope + t_crit*se_slope))
+        intercept_ci = (float(intercept - t_crit*se_intercept), float(intercept + t_crit*se_intercept))
+        r_squared = float(1 - sse / np.sum((ym - np.mean(ym))**2))
+    else:
+        se_slope = se_intercept = 0
+        slope_ci = intercept_ci = (0, 0)
+        r_squared = 0
 
     # Cramér prediction line: y = x
     # Observed max merit at N
@@ -105,6 +125,11 @@ def main():
         "ratio_observed_over_cramer": max_merit / cramer_predict if cramer_predict > 0 else 0,
         "fit_slope": float(slope),
         "fit_intercept": float(intercept),
+        "fit_slope_se": float(se_slope),
+        "fit_intercept_se": float(se_intercept),
+        "fit_slope_95ci": list(slope_ci),
+        "fit_intercept_95ci": list(intercept_ci),
+        "r_squared": float(r_squared),
         "n_bins": n_bins,
         "verdict": "consistent with Cramer" if max_merit <= cramer_predict else "EXCEEDS Cramer",
     }
@@ -124,6 +149,9 @@ def main():
     print("Ratio (observed/Cramer): " + format(max_merit/cramer_predict, ".4f"))
     print("")
     print("Upper envelope fit: y = " + format(slope, ".4f") + " * x + " + format(intercept, ".4f"))
+    print("  95% CI slope:      [" + format(slope_ci[0], ".4f") + ", " + format(slope_ci[1], ".4f") + "]")
+    print("  95% CI intercept:  [" + format(intercept_ci[0], ".4f") + ", " + format(intercept_ci[1], ".4f") + "]")
+    print("  R²:                " + format(r_squared, ".4f"))
     print("")
     print("Verdict: " + report["verdict"])
     print("=" * 60)

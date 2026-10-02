@@ -133,5 +133,13 @@
       "gap": 30,
       "share_pct": 4.82413883553366
     }
-  ]
+  ],
+  "_confidence": {
+    "computation": 100,
+    "interpretation": 100,
+    "novelty": 60,
+    "type": "exact_computation",
+    "reference": "Odlyzko, Rubinstein, Wolf (1999)",
+    "limitation": "None \u2014 exact count from histogram"
+  }
 }

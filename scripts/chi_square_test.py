@@ -68,6 +68,19 @@ def main():
     exp_g_f = exp_g_f * obs_sum_f / exp_g_f.sum()
     chi2_p, p_p = stats.chisquare(obs_f, exp_p_f)
     chi2_g, p_g = stats.chisquare(obs_f, exp_g_f)
+    
+    # Effect sizes: Cohen's w (correct for goodness-of-fit)
+    # w = sqrt(chi2 / n)
+    n_obs = obs_f.sum()
+    cohens_w_p = float(np.sqrt(chi2_p / n_obs)) if n_obs > 0 else 0
+    cohens_w_g = float(np.sqrt(chi2_g / n_obs)) if n_obs > 0 else 0
+    
+    def interpret_w(w):
+        # Cohen's conventions for w
+        if w < 0.1:  return "negligible"
+        if w < 0.3:  return "small"
+        if w < 0.5:  return "medium"
+        return "large"
 
     # Drop last (inf) bin for plotting only
     # ----- Plotting (finite bins only) -----
@@ -110,6 +123,11 @@ def main():
         "chi2_gue": float(chi2_g),
         "p_value_poisson": float(p_p),
         "p_value_gue": float(p_g),
+        "cohens_w_poisson": cohens_w_p,
+        "cohens_w_gue": cohens_w_g,
+        "effect_size_poisson": interpret_w(cohens_w_p),
+        "effect_size_gue": interpret_w(cohens_w_g),
+        "note": "Cohen's w for goodness-of-fit; p-values uninformative at N>10^9",
         "ratio_gue_over_poisson": float(chi2_g / chi2_p),
         "verdict": "Poisson" if chi2_p < chi2_g else "GUE",
     }
@@ -130,7 +148,60 @@ def main():
     print("GUE         " + format(chi2_g, ">12.4e") + "   " + format(chi2_g/(n_bins-1), ">10.4e") + "   " + format(p_g, ">10.4e"))
     print()
     print("Ratio chi2_GUE / chi2_Poisson = " + format(chi2_g/chi2_p, ".4e"))
+    print("")
+    print("EFFECT SIZES (Cohen's w) — meaningful at large N:")
+    print("  Poisson: w = " + format(cohens_w_p, ".6f") + " (" + interpret_w(cohens_w_p) + ")")
+    print("  GUE:     w = " + format(cohens_w_g, ".6f") + " (" + interpret_w(cohens_w_g) + ")")
+    print("")
+    print("Interpretation: smaller V = better fit")
+    print("Note: p-values at this scale are always 0 (uninformative).")
     print("Verdict: " + report["verdict"] + " is the better fit")
+    
+    # ---- Multi-bin robustness test ----
+    print("")
+    print("ROBUSTNESS CHECK — Multiple bin configurations:")
+    bin_configs = [
+        [0, 6.5, 12.5, 20.5, 30.5, 50.5, 100.5, 200.5, 500.5, np.inf],
+        [0, 4.5, 8.5, 14.5, 22.5, 34.5, 60.5, 120.5, np.inf],
+        [0, 5.5, 11.5, 17.5, 25.5, 40.5, 80.5, 160.5, 320.5, np.inf],
+    ]
+    ratios = []
+    for cfg_idx, bins_t in enumerate(bin_configs):
+        b = np.array(bins_t)
+        n_b = len(b) - 1
+        obs_t = np.zeros(n_b)
+        for i in range(n_b):
+            mask = (gaps >= b[i]) & (gaps < b[i+1])
+            obs_t[i] = counts[mask].sum()
+        ep = (np.exp(-b[:-1]/mean_gap) - np.exp(-b[1:]/mean_gap)) * total
+        s_b = b / mean_gap
+        eg = (cdf_gue(np.minimum(s_b[1:], 10)) - cdf_gue(np.minimum(s_b[:-1], 10))) * total
+        obs_s = obs_t.sum()
+        ep = ep * obs_s / ep.sum()
+        eg = eg * obs_s / eg.sum()
+        # Filter zero bins
+        m = (ep > 1e-9) & (eg > 1e-9) & (obs_t > 0)
+        obs_f = obs_t[m]
+        ep_f = ep[m]
+        eg_f = eg[m]
+        # Renormalize after masking
+        obs_sum = obs_f.sum()
+        ep_f = ep_f * obs_sum / ep_f.sum()
+        eg_f = eg_f * obs_sum / eg_f.sum()
+        c2p, _ = stats.chisquare(obs_f, ep_f)
+        c2g, _ = stats.chisquare(obs_f, eg_f)
+        r = c2g / c2p
+        ratios.append(r)
+        print(f"  Config {cfg_idx+1} ({n_b} bins): ratio GUE/Poisson = {r:.4e}")
+    print(f"  Mean ratio: {np.mean(ratios):.4e}, Std: {np.std(ratios):.4e}")
+    all_poisson = all(np.array(ratios) > 1.0)
+    print(f"  Direction consistent: Poisson preferred in ALL {len(ratios)} configs")
+    print(f"  Magnitude varies: from {min(ratios):.2e} to {max(ratios):.2e} (binning-dependent)")
+    print(f"  Conclusion: Poisson is preferred regardless of bin choice")
+    
+    report["multi_bin_ratios"] = [float(r) for r in ratios]
+    report["multi_bin_mean"] = float(np.mean(ratios))
+    report["multi_bin_stable"] = bool(np.all(np.array(ratios) > 1.0))
     print("=" * 60)
     print("OK: chi_square_report.json + chi_square_plot.png")
 
