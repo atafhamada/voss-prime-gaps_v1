@@ -22,9 +22,16 @@
 
 #define MAX_GAP 100000
 #define SHARED_HIST_SIZE 10000
+#define MODQ_MAX_GAP 100
+#define MODQ_NUM_Q6 2
+#define MODQ_NUM_Q30 8
+#define MODQ_NUM_TOTAL 10
+
+__constant__ int W30_TO_Q6_IDX[8]  = {0, 0, 1, 0, 1, 0, 1, 1};
+__constant__ int W30_TO_Q30_IDX[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 #define HIST_BLOCK 256
 #define LARGE_GAP_THRESHOLD 500
-#define MAX_LARGE_GAPS 2000000
+#define MAX_LARGE_GAPS 5000000
 
 __constant__ int W30_DEV[8] = {1, 7, 11, 13, 17, 19, 23, 29};
 static const int W30[8] = {1, 7, 11, 13, 17, 19, 23, 29};
@@ -163,16 +170,62 @@ __global__ void mod4_count_kernel(const uint64_t* __restrict__ positions,
     else if (r == 3) atomicAdd(cnt3, 1ULL);
 }
 
-__global__ void gaps_w30_seg_kernel(const uint64_t* __restrict__ positions,
-    uint64_t n, uint64_t k_base, int64_t* __restrict__ global_hist,
+#define NUM_Q 2
+#define MAX_Q_SLOTS 40
+
+__constant__ int Q_VALUES[NUM_Q] = {6, 30};
+__constant__ int Q_OFFSETS[NUM_Q] = {0, 6};
+
+// Precomputed lookup tables: W30 residue index -> residue mod q
+__constant__ int W30_TO_Q6[8]  = {1, 1, 5, 1, 5, 1, 5, 5};
+__constant__ int W30_TO_Q8[8]  = {1, 7, 3, 5, 1, 3, 7, 5};
+__constant__ int W30_TO_Q12[8] = {1, 7, 11, 1, 5, 7, 11, 5};
+__constant__ int W30_TO_Q24[8] = {1, 7, 11, 13, 17, 19, 23, 5};
+__constant__ int W30_TO_Q30[8] = {1, 7, 11, 13, 17, 19, 23, 29};
+
+__global__ void modq_count_kernel(
+    const uint64_t* __restrict__ positions,
+    uint64_t n,
+    uint64_t k_base,
+    unsigned long long* __restrict__ counters)
+{
+    // Shared-memory private counters (offset 0 for q=6, offset 6 for q=30)
+    __shared__ unsigned int sh[MAX_Q_SLOTS];
+    int tid = threadIdx.x;
+    for (int i = tid; i < MAX_Q_SLOTS; i += blockDim.x) sh[i] = 0;
+    __syncthreads();
+    
+    uint64_t i = (uint64_t)blockIdx.x*blockDim.x + tid;
+    if (i < n) {
+        int w = (int)(positions[i] & 7);
+        atomicAdd(&sh[0 + W30_TO_Q6[w]], 1u);
+        atomicAdd(&sh[6 + W30_TO_Q30[w]], 1u);
+    }
+    __syncthreads();
+    
+    // Merge ALL shared slots to global
+    for (int i = tid; i < MAX_Q_SLOTS; i += blockDim.x) {
+        if (sh[i] > 0) atomicAdd(&counters[i], (unsigned long long)sh[i]);
+    }
+}
+
+__global__ void gaps_w30_seg_kernel(
+    const uint64_t* __restrict__ positions,
+    uint64_t n, uint64_t k_base,
+    int64_t* __restrict__ global_hist,
+    int64_t* __restrict__ global_modq_hist,
     LargeGap* __restrict__ large_gaps,
     unsigned int* __restrict__ large_gap_count,
     int large_gap_threshold, int max_large_gaps)
 {
     __shared__ int local_hist[SHARED_HIST_SIZE];
+    __shared__ int modq_hist[MODQ_NUM_TOTAL][MODQ_MAX_GAP];
     int tid = threadIdx.x;
     for (int i = tid; i < SHARED_HIST_SIZE; i += HIST_BLOCK) local_hist[i] = 0;
+    for (int j = tid; j < MODQ_NUM_TOTAL * MODQ_MAX_GAP; j += HIST_BLOCK)
+        ((int*)modq_hist)[j] = 0;
     __syncthreads();
+
     uint64_t i = (uint64_t)blockIdx.x*HIST_BLOCK + tid;
     if (i > 0 && i < n) {
         uint64_t idx1 = positions[i], idx0 = positions[i-1];
@@ -182,6 +235,14 @@ __global__ void gaps_w30_seg_kernel(const uint64_t* __restrict__ positions,
         if (diff > 0) {
             if (diff < (uint64_t)SHARED_HIST_SIZE) atomicAdd(&local_hist[diff], 1);
             else if (diff < (uint64_t)MAX_GAP) atomicAdd((unsigned long long*)&global_hist[diff], 1ULL);
+
+            // Per-residue gap histogram (classify by residue of v0)
+            if (diff < (uint64_t)MODQ_MAX_GAP) {
+                int w0 = (int)(idx0 & 7);
+                atomicAdd(&modq_hist[W30_TO_Q6_IDX[w0]][diff], 1);
+                atomicAdd(&modq_hist[MODQ_NUM_Q6 + W30_TO_Q30_IDX[w0]][diff], 1);
+            }
+
             double merit_d = 0.0;
             if (diff > 100) merit_d = (double)diff / log((double)v0);
             if (diff >= (uint64_t)large_gap_threshold || merit_d >= 10.0) {
@@ -201,7 +262,12 @@ __global__ void gaps_w30_seg_kernel(const uint64_t* __restrict__ positions,
         int v = local_hist[j];
         if (v > 0) atomicAdd((unsigned long long*)&global_hist[j], (unsigned long long)v);
     }
+    for (int j = tid; j < MODQ_NUM_TOTAL * MODQ_MAX_GAP; j += HIST_BLOCK) {
+        int v = ((int*)modq_hist)[j];
+        if (v > 0) atomicAdd((unsigned long long*)&global_modq_hist[j], (unsigned long long)v);
+    }
 }
+
 
 struct LaunchInfo { uint32_t p; int64_t s[8]; int grid_x; };
 
@@ -274,6 +340,12 @@ int main() {
     CUDA_CHECK(cudaMalloc(&lg_count_d, sizeof(unsigned int)));
     CUDA_CHECK(cudaMalloc(&m1_d, sizeof(unsigned long long)));
     CUDA_CHECK(cudaMalloc(&m3_d, sizeof(unsigned long long)));
+    int64_t* modq_gap_hist_d;
+    CUDA_CHECK(cudaMalloc(&modq_gap_hist_d, MODQ_NUM_TOTAL * MODQ_MAX_GAP * sizeof(int64_t)));
+    CUDA_CHECK(cudaMemset(modq_gap_hist_d, 0, MODQ_NUM_TOTAL * MODQ_MAX_GAP * sizeof(int64_t)));
+    unsigned long long* modq_d;
+    CUDA_CHECK(cudaMalloc(&modq_d, MAX_Q_SLOTS * sizeof(unsigned long long)));
+    CUDA_CHECK(cudaMemset(modq_d, 0, MAX_Q_SLOTS * sizeof(unsigned long long)));
 
     CUDA_CHECK(cudaMemset(count_d, 0, sizeof(uint64_t)));
     CUDA_CHECK(cudaMemset(gaps_d, 0, MAX_GAP*sizeof(int64_t)));
@@ -417,13 +489,15 @@ int main() {
             int mg = (int)((n_pos + BLOCK - 1)/BLOCK);
             mod4_count_kernel<<<mg, BLOCK>>>(positions_d, n_pos, k_base, m1_d, m3_d);
             CUDA_CHECK(cudaDeviceSynchronize());
+            modq_count_kernel<<<mg, BLOCK>>>(positions_d, n_pos, k_base, modq_d);
+            CUDA_CHECK(cudaDeviceSynchronize());
         }
         auto t4 = std::chrono::high_resolution_clock::now();
         t_mod4 += std::chrono::duration<double,std::milli>(t4-t3).count();
 
         int gg = (int)((n_pos + HIST_BLOCK - 1)/HIST_BLOCK);
         gaps_w30_seg_kernel<<<gg, HIST_BLOCK>>>(positions_d, n_pos, k_base,
-            gaps_d, large_gaps_d, lg_count_d, LARGE_GAP_THRESHOLD, MAX_LARGE_GAPS);
+            gaps_d, modq_gap_hist_d, large_gaps_d, lg_count_d, LARGE_GAP_THRESHOLD, MAX_LARGE_GAPS);
         CUDA_CHECK(cudaDeviceSynchronize());
         auto t5 = std::chrono::high_resolution_clock::now();
         t_gaps += std::chrono::duration<double,std::milli>(t5-t4).count();
@@ -462,6 +536,7 @@ int main() {
                 cudaFree(bits_d); cudaFree(positions_d); cudaFree(count_d);
                 cudaFree(gaps_d); cudaFree(large_gaps_d); cudaFree(lg_count_d);
                 cudaFree(m1_d); cudaFree(m3_d);
+    cudaFree(modq_gap_hist_d);
                 free(base_h); free(gaps_total);
                 return 0;
             }
@@ -579,6 +654,51 @@ int main() {
         printf("OK hl_trend.csv (hybrid)\n");
     }
 
+        fp = fopen("modq_counts.csv", "w");
+    if (fp) {
+        unsigned long long* modq_h = (unsigned long long*)malloc(MAX_Q_SLOTS * sizeof(unsigned long long));
+        CUDA_CHECK(cudaMemcpy(modq_h, modq_d, MAX_Q_SLOTS * sizeof(unsigned long long), cudaMemcpyDeviceToHost));
+        static const int QV[2] = {6, 30};
+        static const int QO[2] = {0, 6};
+        fprintf(fp, "q,a,count\n");
+        for (int qi = 0; qi < 2; qi++) {
+            int q = QV[qi];
+            int off = QO[qi];
+            for (int a = 0; a < q; a++)
+                fprintf(fp, "%d,%d,%llu\n", q, a, modq_h[off + a]);
+        }
+        fclose(fp);
+        free(modq_h);
+        printf("OK modq_counts.csv\n");
+    }
+
+    // Per-residue gap histograms (Arithmetic Modulation complete)
+    fp = fopen("modq_gap_hist.csv", "w");
+    if (fp) {
+        int64_t* mqh = (int64_t*)malloc(MODQ_NUM_TOTAL * MODQ_MAX_GAP * sizeof(int64_t));
+        CUDA_CHECK(cudaMemcpy(mqh, modq_gap_hist_d, MODQ_NUM_TOTAL * MODQ_MAX_GAP * sizeof(int64_t), cudaMemcpyDeviceToHost));
+        static const int QV[2] = {6, 30};
+        static const int Q_OFF[2] = {0, MODQ_NUM_Q6};
+        static const int Q_NRES[2] = {MODQ_NUM_Q6, MODQ_NUM_Q30};
+        static const int Q_RES[2][8] = {
+            {1, 5, 0, 0, 0, 0, 0, 0},
+            {1, 7, 11, 13, 17, 19, 23, 29}
+        };
+        fprintf(fp, "q,residue,gap,count\n");
+        for (int qi = 0; qi < 2; qi++) {
+            for (int ri = 0; ri < Q_NRES[qi]; ri++) {
+                for (int g = 1; g < MODQ_MAX_GAP; g++) {
+                    int64_t c = mqh[(Q_OFF[qi] + ri) * MODQ_MAX_GAP + g];
+                    if (c > 0)
+                        fprintf(fp, "%d,%d,%d,%lld\n", QV[qi], Q_RES[qi][ri], g, (long long)c);
+                }
+            }
+        }
+        fclose(fp);
+        free(mqh);
+        printf("OK modq_gap_hist.csv\n");
+    }
+
     fp = fopen("chebyshev.csv", "w");
     if (fp) { fprintf(fp, "N,pi_4_1,pi_4_3,difference\n");
         fprintf(fp, "%lld,%llu,%llu,%lld\n", (long long)N, p41, p43, diff);
@@ -587,17 +707,21 @@ int main() {
     unsigned int lgc;
     CUDA_CHECK(cudaMemcpy(&lgc, lg_count_d, sizeof(unsigned int), cudaMemcpyDeviceToHost));
     printf("\n=== Large Gaps (>= %d) ===\nCount: %u\n", LARGE_GAP_THRESHOLD, lgc);
-    if (lgc > 0) {
-        unsigned int tr = lgc < (unsigned)MAX_LARGE_GAPS ? lgc : (unsigned)MAX_LARGE_GAPS;
-        LargeGap* lgh = (LargeGap*)malloc(tr*sizeof(LargeGap));
-        CUDA_CHECK(cudaMemcpy(lgh, large_gaps_d, tr*sizeof(LargeGap), cudaMemcpyDeviceToHost));
-        std::sort(lgh, lgh + tr, [](const LargeGap&a, const LargeGap&b){return a.merit>b.merit;});
+        {
+        unsigned int tr = (lgc < (unsigned)MAX_LARGE_GAPS) ? lgc : (unsigned)MAX_LARGE_GAPS;
+        LargeGap* lgh = (LargeGap*)malloc((tr > 0 ? tr : 1) * sizeof(LargeGap));
+        if (tr > 0) {
+            CUDA_CHECK(cudaMemcpy(lgh, large_gaps_d, tr*sizeof(LargeGap), cudaMemcpyDeviceToHost));
+            std::sort(lgh, lgh+tr, [](const LargeGap&a, const LargeGap&b){return a.merit>b.merit;});
+        }
         fp = fopen("large_gaps.csv", "w");
-        if (fp) { fprintf(fp, "position,gap,merit\n");
-            for (unsigned int i=0;i<tr;i++)
+        if (fp) {
+            fprintf(fp, "position,gap,merit\n");
+            for (unsigned int i = 0; i < tr; i++)
                 fprintf(fp, "%llu,%d,%.6f\n", (unsigned long long)lgh[i].position, lgh[i].gap, lgh[i].merit);
-            fclose(fp); printf("OK large_gaps.csv\n");
-            for (unsigned int i=0;i<tr && i<10;i++)
+            fclose(fp);
+            printf("OK large_gaps.csv (%u entries)\n", tr);
+            for (unsigned int i = 0; i < tr && i < 10; i++)
                 printf("  gap=%4d merit=%6.2f at p=%llu\n", lgh[i].gap, lgh[i].merit,
                        (unsigned long long)lgh[i].position);
         }
@@ -608,6 +732,7 @@ int main() {
     cudaFree(bits_d); cudaFree(positions_d); cudaFree(count_d);
     cudaFree(gaps_d); cudaFree(large_gaps_d); cudaFree(lg_count_d);
     cudaFree(m1_d); cudaFree(m3_d);
+    cudaFree(modq_d);
     free(base_h); free(gaps_total);
     printf("\nDone.\n");
     return 0;

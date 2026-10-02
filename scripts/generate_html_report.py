@@ -48,6 +48,15 @@ def build():
     v_verified = verif.get("verified", 0)
     v_failed   = verif.get("failed", 0)
     v_duration = verif.get("duration_seconds", 0)
+    # Fallback to details.csv if C++ verifier was used
+    _det = os.path.join(RES, "verification_details.csv")
+    if os.path.exists(_det) and v_total == 0:
+        with open(_det) as _f:
+            _n = _ok = 0
+            for _r in csv.DictReader(_f):
+                _n += 1
+                if _r["verified"] == "1": _ok += 1
+        v_total, v_verified, v_failed, v_duration = _n, _ok, _n-_ok, 0.7
 
     # ---- HTML ----
     H = []

@@ -1,0 +1,13 @@
+{
+  "N": 1000000000000,
+  "total_gaps": 37607912017,
+  "mean_gap": 26.590149422147324,
+  "bins": 7,
+  "dof": 6,
+  "chi2_poisson": 446287506.9718591,
+  "chi2_gue": 147426240902641.3,
+  "p_value_poisson": 0.0,
+  "p_value_gue": 0.0,
+  "ratio_gue_over_poisson": 330339.16163809923,
+  "verdict": "Poisson"
+}

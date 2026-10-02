@@ -1,0 +1,13 @@
+{
+  "N": 1000000000000,
+  "n_points": 389279,
+  "max_merit_observed": 19.80776,
+  "max_merit_position": 461690510543,
+  "max_merit_gap": 532,
+  "cramer_predicted_max": 27.631021115928547,
+  "ratio_observed_over_cramer": 0.7168667389053296,
+  "fit_slope": 0.8373299218092607,
+  "fit_intercept": -3.0343805010399727,
+  "n_bins": 30,
+  "verdict": "consistent with Cramer"
+}

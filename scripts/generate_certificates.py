@@ -156,17 +156,62 @@ def main():
     os.makedirs(os.path.dirname(CERT_CSV), exist_ok=True)
     print(f"\nGenerating: {CERT_CSV}")
     t0 = time.time()
+    # ---- Read verification details (avoid re-verification) ----
+    details_path = os.path.join(ROOT, 'results', 'verification_details.csv')
+    verified_map = {}
+    if os.path.exists(details_path):
+        print(f"Reading verification details: {details_path}")
+        with open(details_path) as f:
+            for r in csv.DictReader(f):
+                key = (int(r['position']), int(r['gap']))
+                verified_map[key] = (r['verified'] == '1')
+        print(f"  Loaded {len(verified_map):,} verification results")
+    else:
+        print(f"WARN: {details_path} not found — will verify inline")
+
+    # ---- Read verification details instead of re-verifying ----
+    details_path = os.path.join(ROOT, 'results', 'verification_details.csv')
+    verified_map = {}
+    if os.path.exists(details_path):
+        print(f"Reading details: {details_path}")
+        with open(details_path) as f:
+            for r in csv.DictReader(f):
+                key = (int(r['position']), int(r['gap']))
+                verified_map[key] = (r['verified'] == '1')
+        print(f"  Loaded {len(verified_map):,} results")
+    else:
+        print(f"WARN: {details_path} not found — will verify inline")
+
+    # ---- Read verification details (avoid re-verification) ----
+    details_path = os.path.join(ROOT, 'results', 'verification_details.csv')
+    verified_map = {}
+    if os.path.exists(details_path):
+        print(f"Reading details: {details_path}")
+        with open(details_path) as f:
+            for r in csv.DictReader(f):
+                key = (int(r['position']), int(r['gap']))
+                verified_map[key] = (r['verified'] == '1')
+        print(f"  Loaded {len(verified_map):,} verification results")
+    else:
+        print(f"WARN: no details file, will verify inline")
+
     verified_count = 0
     with open(CERT_CSV, 'w', newline='') as f:
         w = csv.writer(f)
         w.writerow(['p_before', 'p_after', 'gap', 'merit', 'sha256', 'verified'])
         for i, (p_after, gap, merit) in enumerate(rows):
             p_before = p_after - gap
-            ok, rc = verify_gap_numba(int(p_after), int(gap), bp_np)
+            key = (p_after, gap)
+            if key in verified_map:
+                ok = verified_map[key]
+            else:
+                ok_int, _ = verify_gap_numba(int(p_after), int(gap), bp_np)
+                ok = (ok_int == 1)
             sha = sha256_cert(p_before, p_after, gap, merit)
             w.writerow([p_before, p_after, gap,
                         f"{merit:.6f}", sha, "YES" if ok else "NO"])
             if ok: verified_count += 1
+
     dt = time.time() - t0
     print(f"  Wrote {len(rows):,} certificates in {dt:.2f}s")
     print(f"  Verified: {verified_count:,}/{len(rows):,}")

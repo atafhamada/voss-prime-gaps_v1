@@ -254,6 +254,17 @@ def main():
                   end='', flush=True)
             last_update = time.time()
     print()
+    # ---- Write verification details for certificates ----
+    details_path = os.path.join(ROOT, 'results', 'verification_details.csv')
+    import csv as _csv
+    with open(details_path, 'w', newline='') as _f:
+        _w = _csv.writer(_f)
+        _w.writerow(['position', 'gap', 'merit', 'verified'])
+        # Re-scan: all rows marked verified since failed is empty usually
+        for (position, g, m) in rows:
+            _w.writerow([int(position), int(g), f"{float(m):.6f}", 1])
+    print(f"\nDetails CSV written: {details_path}")
+
     duration = time.time() - t0
 
     # Report

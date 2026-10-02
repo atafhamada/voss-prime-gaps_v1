@@ -176,8 +176,9 @@ def fig_gap_stats():
     rows = read_csv("hl_trend.csv")
     if not rows: return
     Ns = [float(r["N"]) for r in rows]
+    Rs = [float(r["P6_over_P2"]) for r in rows]
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.semilogx(Ns, [1.7783, 1.8018, 1.8208, 1.8366, 1.8497][:len(Ns)],
+    ax.semilogx(Ns, Rs,
                 "o-", color="#2E86DE", linewidth=2.5,
                 markersize=10, label="P(6)/P(2)")
     ax.set_xlabel("N")
