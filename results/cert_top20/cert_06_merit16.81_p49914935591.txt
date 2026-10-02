@@ -1,0 +1,19 @@
+==================================================================
+           VOSS NUMERICAL CERTIFICATE OF PRIME GAP
+==================================================================
+Prime Before (p)        : 49,914,935,177
+Prime After  (p+g)      : 49,914,935,591
+Gap Size (g)            : 414
+Merit (g / ln p)        : 16.806322
+ln(p)                   : 24.633586
+Max Factor Limit (√p+g) : 223,416
+------------------------------------------------------------------
+VERIFICATION METHOD:
+  1. p_before and p_after are proven prime via
+     Deterministic Miller-Rabin (bases 2,3,5,7,11,13,17,19,23,29,31,37).
+  2. All 413 integers in (p, p+g) are proven composite
+     via Interval Sieve with base primes up to √(p+g).
+------------------------------------------------------------------
+SHA-256: bed39ee3a182d532255622dc5d9a99c54db103828164ac5a3fc6dc4fc3f084e6
+Generated: 2026-10-02 02:10:44
+==================================================================

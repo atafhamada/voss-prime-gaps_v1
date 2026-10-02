@@ -1,0 +1,11 @@
+{
+  "input": "/content/voss-prime-gaps/results/large_gaps.csv",
+  "total_gaps": 36482,
+  "verified": 36482,
+  "failed": 0,
+  "duration_seconds": 25.28,
+  "max_merit_verified": 19.044132,
+  "largest_gap": 464,
+  "failed_examples": [],
+  "timestamp": "2026-10-02 02:10:18"
+}

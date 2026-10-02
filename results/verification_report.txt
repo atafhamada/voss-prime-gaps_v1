@@ -1,0 +1,12 @@
+============================================================
+VOSS VERIFICATION REPORT
+============================================================
+Timestamp     : 2026-10-02 02:10:18
+Input         : /content/voss-prime-gaps/results/large_gaps.csv
+Total gaps    : 36,482
+Verified      : 36,482
+Failed        : 0
+Duration      : 25.28 s
+Max merit     : 19.0441
+Largest gap   : 464
+============================================================

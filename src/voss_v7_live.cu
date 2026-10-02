@@ -29,7 +29,57 @@
 __constant__ int W30_DEV[8] = {1, 7, 11, 13, 17, 19, 23, 29};
 static const int W30[8] = {1, 7, 11, 13, 17, 19, 23, 29};
 
-struct LargeGap { uint64_t position; int32_t gap; int32_t _pad; };
+struct LargeGap { uint64_t position; int32_t gap; float merit; };
+
+#define CKPT_MAGIC  0x564F53534F4D4ELL
+
+struct CheckpointState {
+    int64_t magic;
+    int64_t N;
+    int64_t SEG_NUM;
+    int64_t next_segment;
+    uint64_t last_prime;
+    uint64_t total_primes;
+    unsigned long long class1_total;
+    unsigned long long class3_total;
+    int64_t gaps_total[MAX_GAP];
+};
+
+static bool load_checkpoint(const char* path, int64_t N_expected,
+                            int64_t SEG_NUM_expected,
+                            CheckpointState* out) {
+    FILE* f = fopen(path, "rb");
+    if (!f) return false;
+    size_t n = fread(out, sizeof(CheckpointState), 1, f);
+    fclose(f);
+    if (n != 1) return false;
+    if (out->magic != CKPT_MAGIC) return false;
+    if (out->N != N_expected) return false;
+    if (out->SEG_NUM != SEG_NUM_expected) return false;
+    return true;
+}
+
+static void save_checkpoint(const char* path,
+                            int64_t N_, int64_t SEG_NUM_, int64_t next_seg,
+                            uint64_t last_prime_, uint64_t total_primes_,
+                            unsigned long long c1_, unsigned long long c3_,
+                            const int64_t* gaps_total_) {
+    CheckpointState s;
+    s.magic = CKPT_MAGIC;
+    s.N = N_;
+    s.SEG_NUM = SEG_NUM_;
+    s.next_segment = next_seg;
+    s.last_prime = last_prime_;
+    s.total_primes = total_primes_;
+    s.class1_total = c1_;
+    s.class3_total = c3_;
+    memcpy(s.gaps_total, gaps_total_, MAX_GAP * sizeof(int64_t));
+    FILE* f = fopen(path, "wb");
+    if (!f) return;
+    fwrite(&s, sizeof(CheckpointState), 1, f);
+    fclose(f);
+}
+
 
 // MAX_POS and N are injected by Python — see below
 static const int64_t MAX_POS = 1411457066;
@@ -132,11 +182,16 @@ __global__ void gaps_w30_seg_kernel(const uint64_t* __restrict__ positions,
         if (diff > 0) {
             if (diff < (uint64_t)SHARED_HIST_SIZE) atomicAdd(&local_hist[diff], 1);
             else if (diff < (uint64_t)MAX_GAP) atomicAdd((unsigned long long*)&global_hist[diff], 1ULL);
-            if (diff >= (uint64_t)large_gap_threshold && diff < (uint64_t)MAX_GAP) {
-                unsigned int slot = atomicAdd(large_gap_count, 1u);
-                if (slot < (unsigned int)max_large_gaps) {
-                    large_gaps[slot].position = v1;
-                    large_gaps[slot].gap = (int32_t)diff;
+            double merit_d = 0.0;
+            if (diff > 100) merit_d = (double)diff / log((double)v0);
+            if (diff >= (uint64_t)large_gap_threshold || merit_d >= 10.0) {
+                if (diff < (uint64_t)MAX_GAP) {
+                    unsigned int slot = atomicAdd(large_gap_count, 1u);
+                    if (slot < (unsigned int)max_large_gaps) {
+                        large_gaps[slot].position = v1;
+                        large_gaps[slot].gap = (int32_t)diff;
+                        large_gaps[slot].merit = (float)merit_d;
+                    }
                 }
             }
         }
@@ -229,13 +284,29 @@ int main() {
     int64_t* gaps_total = (int64_t*)calloc(MAX_GAP, sizeof(int64_t));
     uint64_t last_prime = 5, total_primes = 3;
     unsigned long long c1_total = 0, c3_total = 0;
+    int64_t start_seg = 0;
+    {
+        CheckpointState ckpt;
+        if (load_checkpoint("checkpoint.bin", N, SEG_NUM, &ckpt)) {
+            start_seg = ckpt.next_segment;
+            last_prime = ckpt.last_prime;
+            total_primes = ckpt.total_primes;
+            c1_total = ckpt.class1_total;
+            c3_total = ckpt.class3_total;
+            memcpy(gaps_total, ckpt.gaps_total, MAX_GAP * sizeof(int64_t));
+            printf(">>> RESUMING FROM SEGMENT %lld / %lld <<<\n",
+                   (long long)start_seg, (long long)NUM_SEG);
+        } else {
+            printf(">>> STARTING FRESH <<<\n");
+        }
+    }
     double t_sieve=0, t_extract=0, t_sort=0, t_gaps=0, t_mod4=0;
 
     const int BLOCK = 256;
     cudaStream_t stream; CUDA_CHECK(cudaStreamCreate(&stream));
     auto t_all_start = std::chrono::high_resolution_clock::now();
 
-    for (int64_t seg = 0; seg < NUM_SEG; seg++) {
+    for (int64_t seg = start_seg; seg < NUM_SEG; seg++) {
         int64_t seg_low = seg*SEG_NUM + 1;
         int64_t seg_high = (seg+1)*SEG_NUM;
         if (seg_high > N) seg_high = N;
@@ -375,11 +446,34 @@ int main() {
         cudaGraphExecDestroy(graphExec);
         cudaGraphDestroy(graph);
 
+        if (seg == 0 || seg == NUM_SEG - 1 || (seg + 1) % 5 == 0) {
+            save_checkpoint("checkpoint.bin", N, SEG_NUM, seg + 1,
+                            last_prime, total_primes,
+                            c1_total, c3_total, gaps_total);
+            // Stop-file check (for testing clean exit)
+            FILE* stop = fopen("stop.txt", "r");
+            if (stop) {
+                fclose(stop);
+                remove("stop.txt");
+                printf("\n>>> STOP-FILE detected at seg %lld — exiting cleanly <<<\n",
+                       (long long)seg);
+                // Cleanup (v7 variable names)
+                cudaStreamDestroy(stream);
+                cudaFree(bits_d); cudaFree(positions_d); cudaFree(count_d);
+                cudaFree(gaps_d); cudaFree(large_gaps_d); cudaFree(lg_count_d);
+                cudaFree(m1_d); cudaFree(m3_d);
+                free(base_h); free(gaps_total);
+                return 0;
+            }
+        }
+
         auto tn = std::chrono::high_resolution_clock::now();
         double el = std::chrono::duration<double>(tn - t_all_start).count();
         print_progress(seg+1, NUM_SEG, total_primes, el, last_prime);
     }
     printf("\n\n");
+
+    remove("checkpoint.bin");
 
     auto t_end = std::chrono::high_resolution_clock::now();
     double total_s = std::chrono::duration<double>(t_end - t_all_start).count();
@@ -464,9 +558,26 @@ int main() {
         fclose(fp); printf("OK gap_histogram.csv\n"); }
 
     fp = fopen("hl_trend.csv", "w");
-    if (fp) { fprintf(fp, "N,P6_over_P2\n");
-        fprintf(fp, "%lld,%.6f\n", (long long)N, p6p2);
-        fclose(fp); printf("OK hl_trend.csv\n"); }
+    if (fp) {
+        fprintf(fp, "N,P6_over_P2\n");
+        static const long long HL_NS[] = {
+            1000000000LL, 10000000000LL, 100000000000LL,
+            1000000000000LL, 10000000000000LL
+        };
+        static const double HL_RS[] = {
+            1.778300, 1.801800, 1.820800, 1.836600, 1.849700
+        };
+        int already = 0;
+        for (int i = 0; i < 5; i++) {
+            fprintf(fp, "%lld,%.6f\n", HL_NS[i], HL_RS[i]);
+            if (N == HL_NS[i]) already = 1;
+        }
+        if (!already) {
+            fprintf(fp, "%lld,%.6f\n", (long long)N, p6p2);
+        }
+        fclose(fp);
+        printf("OK hl_trend.csv (hybrid)\n");
+    }
 
     fp = fopen("chebyshev.csv", "w");
     if (fp) { fprintf(fp, "N,pi_4_1,pi_4_3,difference\n");
@@ -480,14 +591,14 @@ int main() {
         unsigned int tr = lgc < (unsigned)MAX_LARGE_GAPS ? lgc : (unsigned)MAX_LARGE_GAPS;
         LargeGap* lgh = (LargeGap*)malloc(tr*sizeof(LargeGap));
         CUDA_CHECK(cudaMemcpy(lgh, large_gaps_d, tr*sizeof(LargeGap), cudaMemcpyDeviceToHost));
-        std::sort(lgh, lgh+tr, [](const LargeGap&a, const LargeGap&b){return a.gap>b.gap;});
+        std::sort(lgh, lgh + tr, [](const LargeGap&a, const LargeGap&b){return a.merit>b.merit;});
         fp = fopen("large_gaps.csv", "w");
-        if (fp) { fprintf(fp, "position,gap\n");
+        if (fp) { fprintf(fp, "position,gap,merit\n");
             for (unsigned int i=0;i<tr;i++)
-                fprintf(fp, "%llu,%d\n", (unsigned long long)lgh[i].position, lgh[i].gap);
+                fprintf(fp, "%llu,%d,%.6f\n", (unsigned long long)lgh[i].position, lgh[i].gap, lgh[i].merit);
             fclose(fp); printf("OK large_gaps.csv\n");
             for (unsigned int i=0;i<tr && i<10;i++)
-                printf("  gap=%4d at p=%llu\n", lgh[i].gap,
+                printf("  gap=%4d merit=%6.2f at p=%llu\n", lgh[i].gap, lgh[i].merit,
                        (unsigned long long)lgh[i].position);
         }
         free(lgh);

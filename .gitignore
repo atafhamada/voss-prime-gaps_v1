@@ -4,10 +4,17 @@ bin/
 *.obj
 *.exe
 
-# CUDA intermediate
+# CUDA intermediates
 *.ptx
 *.cubin
 *.fatbin
+
+# Backups
+*.pre_ckpt
+*.pre_hl
+*.pre_merit
+*.bak
+*.pre_*
 
 # Python
 __pycache__/
@@ -23,5 +30,10 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Backups
-*.bak
+# Runtime state
+results/checkpoint.bin
+results/stop.txt
+
+# Large results (optional — comment out to include)
+# results/certificates.csv
+# results/large_gaps.csv
