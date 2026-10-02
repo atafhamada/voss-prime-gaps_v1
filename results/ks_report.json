@@ -1,11 +1,11 @@
 {
-  "N": 100000000000,
-  "total_gaps": 4118054812,
-  "mean_gap": 24.283309606176267,
-  "ks_statistic_poisson": 0.04289955217389059,
-  "ks_statistic_gue": 0.2809098580189629,
+  "N": 100000000000000,
+  "total_gaps": 3204941750801,
+  "mean_gap": 31.201815126586418,
+  "ks_statistic_poisson": 0.035588786409172346,
+  "ks_statistic_gue": 0.27342466536541704,
   "p_value_poisson": 0.0,
   "p_value_gue": 0.0,
   "verdict": "Poisson",
-  "ratio_gue_over_poisson": 6.548083692816017
+  "ratio_gue_over_poisson": 7.682888149705126
 }

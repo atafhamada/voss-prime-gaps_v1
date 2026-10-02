@@ -10,11 +10,11 @@
 [![GPU](https://img.shields.io/badge/GPU-A100%20%7C%20H100-76B900?logo=nvidia&logoColor=white)](https://www.nvidia.com/en-us/data-center/a100/)
 [![Python](https://img.shields.io/badge/Python-3.8+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Verified](https://img.shields.io/badge/Verified-N%20%E2%89%A4%2010%C2%B9%C2%B3-brightgreen)](https://oeis.org/A006880)
+[![Verified](https://img.shields.io/badge/Verified-N%20%E2%89%A4%2010%C2%B9%E2%81%B4-brightgreen)](https://oeis.org/A006880)
 [![Analyses](https://img.shields.io/badge/Analyses-12%2F12-blue)](https://github.com/atafhamada/voss-prime-gaps_v1)
 [![Confidence](https://img.shields.io/badge/Confidence-98.7%25-success)](https://github.com/atafhamada/voss-prime-gaps_v1/blob/main/results/confidence_scores.json)
 
-*Computes, verifies, and certifies every prime gap up to 10¹³ — in a single command.*
+*Computes, verifies, and certifies every prime gap up to 10¹⁴ — in a single command.*
 
 </div>
 
@@ -124,21 +124,23 @@ All results are validated against **OEIS A006880** and the
 | 10¹¹     | 5.8 s      | 4,118,054,813     | ~19×             |
 | 10¹²     | 68.5 s     | 37,607,912,018    | ~18×             |
 | 10¹³     | 954 s      | 346,065,536,839   | ~3.8×            |
+| 10¹⁴     | 21,671 s   | 3,204,941,750,802 | ~2.9×            |
 
 > All values verified against **OEIS A006880**.
 > Speedup figures derived from published `primesieve` benchmarks on comparable CPUs.
+> 10¹⁴ computed on A100-80GB (single GPU) in 6.39 hours.
 
-### Timing Breakdown (N = 10¹³)
+### Timing Breakdown (N = 10¹⁴)
 
-| Phase           | Time (s)  | Share  |
-|-----------------|-----------|--------|
-| Sieve           | 692.63    | 72.61% |
-| Extract         |  82.35    |  8.63% |
-| Sort            |  40.83    |  4.28% |
-| Mod-4 + modq    |  21.91    |  2.30% |
-| Gaps            |  29.01    |  3.04% |
-| Other           |  87.18    |  9.14% |
-| **Total**       | **953.91** | **100%** |
+| Phase           | Time (s)    | Share  |
+|-----------------|-------------|--------|
+| Sieve           | 16,959.18   | 78.26% |
+| Extract         |    838.99   |  3.87% |
+| Sort            |    354.99   |  1.64% |
+| Mod-4 + modq    |    203.85   |  0.94% |
+| Gaps            |    279.75   |  1.29% |
+| Other           |  3,033.80   | 14.00% |
+| **Total**       | **21,670.57** | **100%** |
 
 ---
 
@@ -305,6 +307,7 @@ Primes ≡ 3 (mod 4) consistently outnumber primes ≡ 1 (mod 4):
 | 10¹¹  | 2,059,020,280     | 2,059,034,532     | **+14,252**   |
 | 10¹²  | 18,803,924,340    | 18,803,987,677    | **+63,337**   |
 | 10¹³  | 173,032,709,183   | 173,032,827,655   | **+118,472**  |
+| 10¹⁴  | 1,602,470,783,672 | 1,602,470,967,129 | **+183,457**  |
 
 ### Hardy–Littlewood Convergence
 
@@ -317,18 +320,19 @@ P(6)/P(2) approaches the HL limit of 2 from below:
 | 10¹¹  | 1.8208    | −8.96 %          |
 | 10¹²  | 1.8366    | −8.17 %          |
 | 10¹³  | 1.8497    | −7.52 %          |
+| 10¹⁴  | 1.8609    | −6.96 %          |
 
-### High-Merit Gaps @ 10¹²
+### High-Merit Gaps @ 10¹⁴
 
 Top by **merit** = `gap / ln(p)`:
 
-| Rank | Position `p`      | Gap | Merit   |
-|------|-------------------|-----|---------|
-| 1    | 461,690,510,543   | 532 | 19.81   |
-| 2    | 738,832,928,467   | 540 | 19.76   |
-| 3    | 614,487,454,057   | 534 | 19.67   |
-| 4    | 304,599,509,051   | 514 | 19.44   |
-| 5    | 416,608,696,337   | 516 | 19.29   |
+| Rank | Position `p`           | Gap | Merit   |
+|------|------------------------|-----|---------|
+| 1    | 2,614,941,711,251      | 652 | 22.80   |
+| 2    | 7,177,162,612,387      | 674 | 22.77   |
+| 3    | 5,120,731,250,857      | 650 | 22.21   |
+| 4    | 11,082,394,066,759     | 662 | 22.04   |
+| 5    | 10,653,514,292,503     | 660 | 22.00   |
 
 All entries are **verified** and **SHA-256 signed**.
 
@@ -627,18 +631,18 @@ All Python dependencies are installed automatically by `run_voss.py`.
 
 Twelve mathematical analyses — **all complete**:
 
-| # | Analysis                          | Confidence | Result                                       |
+| # | Analysis                          | Confidence | Result @ 10¹⁴                                |
 |---|-----------------------------------|-----------:|----------------------------------------------|
 | 1 | Chi-square: Poisson vs GUE        | 98.5%      | Poisson preferred in all bin configs         |
-| 2 | Kolmogorov–Smirnov test           | 99.0%      | Poisson KS distance 0.043 vs GUE 0.281       |
-| 3 | Cramér's conjecture test          | 98.5%      | Merit_max / ln(p) ratio = 0.75 (with 95% CI) |
+| 2 | Kolmogorov–Smirnov test           | 99.0%      | Poisson KS distance 0.036 vs GUE 0.273       |
+| 3 | Cramér's conjecture test          | 98.5%      | Merit_max / ln(p) ratio = 0.71 (with 95% CI) |
 | 4 | Jumping Champions mapping         | 100%       | Champion = 6 (primorial)                     |
 | 5 | Dirichlet residues (mod q)        | 100%       | β(q): 0.54 (q=6) → 0.84 (q=30)               |
-| 6 | Anomalous gaps detection          | 100%       | 20 record gaps @ 10¹¹                         |
-| 7 | k-tuples (twins, cousins, sexy)   | 100%       | Twins: 224,376,048; triplets HL ratio 1.009  |
-| 8 | k-tuples (triplets, quadruplets)  | 99.0%      | HL ratios 1.009 and 1.004 (distributed sample)|
-| 9 | Autocorrelation (real sequence)   | 97.5%      | Lag-1 = −0.038 (consistent with 2006)        |
-| 10| Brun's Constant                   | 97.5%      | Estimate 1.860 (error −2.2%)                 |
+| 6 | Anomalous gaps detection          | 100%       | 35 record gaps; largest = 674                |
+| 7 | k-tuples (twins, cousins, sexy)   | 100%       | Twins: 135,780,321,665 (HL ratio 1.069)      |
+| 8 | k-tuples (triplets, quadruplets)  | 99.0%      | HL ratios 1.019 and 1.035 (distributed sample)|
+| 9 | Autocorrelation (real sequence)   | 97.5%      | Lag-1 = −0.018 (consistent with 2006)        |
+| 10| Brun's Constant                   | 97.5%      | Estimate 1.867 (error −1.84%)                |
 | 11| Legendre's Conjecture (n ≤ 10K)   | 100%       | 100% pass (empirical)                        |
 | 12| HL Singular Series (small gaps)   | 96.0%      | Small-gap mean ratio 0.99                    |
 | 13| Cimpeanu scaling fit              | 97.5%      | Empirical fit R = 0.561 + 0.0064·ln(p)       |
@@ -647,12 +651,15 @@ Twelve mathematical analyses — **all complete**:
 
 **Target:** 3–4 peer-reviewed publications.
 
-### Key findings
+### Key findings @ 10¹⁴
 
-- **Poisson vs GUE**: Poisson preferred by 4.2M× (Chi-square), 6.5× (KS) — consistent across tests.
-- **k-tuples**: Hardy–Littlewood triplets ratio 1.009, quadruplets 1.004 — excellent agreement.
-- **Autocorrelation**: Negative lag-1 correlation (−0.038) confirms Ares-Castro (2006).
-- **Champion stability**: Gap = 6 dominates up to 10¹³.
+- **π(10¹⁴) = 3,204,941,750,802** — exact match with OEIS A006880.
+- **Poisson vs GUE**: Poisson preferred by 12,218× (Chi-square), 7.7× (KS) — consistent across tests.
+- **Chebyshev bias**: π(4,3) − π(4,1) = **+183,457** at 10¹⁴.
+- **k-tuples**: Hardy–Littlewood twins ratio 1.069, sexy ratio 0.994 — excellent agreement.
+- **Autocorrelation**: Negative lag-1 correlation (−0.018) confirms Ares-Castro (2006).
+- **Champion stability**: Gap = 6 dominates up to 10¹⁴.
+- **Largest gap**: 674 at p = 7,177,162,612,387 (merit 22.77).
 - **Cimpeanu fit**: `R(p) = 0.561 + 0.0064·ln(p)` — 99% agreement with published law.
 
 ## References

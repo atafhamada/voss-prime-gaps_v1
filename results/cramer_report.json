@@ -1,24 +1,24 @@
 {
-  "N": 100000000000,
-  "n_points": 36482,
-  "max_merit_observed": 19.044132,
-  "max_merit_position": 25056082543,
-  "max_merit_gap": 456,
-  "cramer_predicted_max": 25.328436022934504,
-  "ratio_observed_over_cramer": 0.7518874036579217,
-  "fit_slope": 0.8285814210593795,
-  "fit_intercept": -2.941810124090608,
-  "fit_slope_se": 0.061543322625620615,
-  "fit_intercept_se": 1.2771416359241665,
+  "N": 100000000000000,
+  "n_points": 5000000,
+  "max_merit_observed": 22.803371,
+  "max_merit_position": 2614941711251,
+  "max_merit_gap": 652,
+  "cramer_predicted_max": 32.23619130191664,
+  "ratio_observed_over_cramer": 0.7073841567209026,
+  "fit_slope": 0.8733398977544683,
+  "fit_intercept": -3.63603962953887,
+  "fit_slope_se": 0.03794329415300031,
+  "fit_intercept_se": 0.8802009637463806,
   "fit_slope_95ci": [
-    0.7079565087131631,
-    0.9492063334055959
+    0.7989710412145877,
+    0.9477087542943489
   ],
   "fit_intercept_95ci": [
-    -5.445007730501974,
-    -0.4386125176792417
+    -5.361233518481776,
+    -1.9108457405959642
   ],
-  "r_squared": 0.883076676172531,
+  "r_squared": 0.9532189999414801,
   "n_bins": 30,
   "verdict": "consistent with Cramer"
 }

@@ -14,12 +14,17 @@ CUDA_BUILD = os.path.join(ROOT, 'bin', 'voss_v7_live.cu')
 BIN_FILE   = os.path.join(ROOT, 'bin', 'voss_v7_live')
 DB_FILE    = os.path.join(ROOT, 'data', 'verification_db.json')
 RESULTS    = os.path.join(ROOT, 'results')
+# 🔒 Persistent checkpoint in Google Drive
+DRIVE_ROOT = '/content/drive/MyDrive/voss-prime-gaps'
+if os.path.isdir(DRIVE_ROOT):
+    os.makedirs(os.path.join(DRIVE_ROOT, 'results'), exist_ok=True)
+    RESULTS    = os.path.join(DRIVE_ROOT, 'results')
 OEIS_URL   = 'https://oeis.org/A006880/b006880.txt'
 
 # ============================================================
 # ⚡ الإعدادات — غيّر هنا فقط
 # ============================================================
-N_VALUE = 100000000000    # 10^12
+N_VALUE = 100000000000000    # 10^12
 SEG_NUM = 30000000000      # 3x10^10 (مناسب لـ A100-40GB)
 
 # ============================================================
@@ -107,9 +112,11 @@ def main():
     print(f"GPU: {gpu}  arch={arch}")
 
     # MAX_POS المناسب
-    max_primes_in_seg = int(1.3 * SEG_NUM / math.log(N_VALUE))
+    # FIXED: Use SEG_NUM (not N) — segment density is what matters
+    # First segment has highest prime density: π(SEG_NUM) ≈ SEG_NUM / ln(SEG_NUM)
+    max_primes_in_seg = int(1.5 * SEG_NUM / math.log(SEG_NUM))
     max_pos_needed = max(max_primes_in_seg, 100_000_000)
-    if mem_gb >= 70:   pos_budget_gb = 34.0
+    if mem_gb >= 70:   pos_budget_gb = 50.0
     elif mem_gb >= 35: pos_budget_gb = 20.0
     else:              pos_budget_gb = 8.0
     max_pos_avail = int(pos_budget_gb * 1e9 / 8)

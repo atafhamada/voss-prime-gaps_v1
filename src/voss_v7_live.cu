@@ -31,7 +31,7 @@ __constant__ int W30_TO_Q6_IDX[8]  = {0, 0, 1, 0, 1, 0, 1, 1};
 __constant__ int W30_TO_Q30_IDX[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 #define HIST_BLOCK 256
 #define LARGE_GAP_THRESHOLD 500
-#define MAX_LARGE_GAPS 5000000
+#define MAX_LARGE_GAPS 50000000
 #define GAP_SEQ_SIZE 5000000
 
 __constant__ int W30_DEV[8] = {1, 7, 11, 13, 17, 19, 23, 29};
